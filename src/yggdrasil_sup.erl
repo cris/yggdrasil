@@ -10,7 +10,9 @@
 %% @doc API for starting the supervisor.
 start_link() -> 
 	error_logger:info_msg("Supervisor!"),
-	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+	Result = supervisor:start_link({local, ?MODULE}, ?MODULE, []),
+	io:format("Result: ~p~n", [Result]),
+	Result.
 
 %%----------------------------------------------------------------------
 %% Supervisor behaviour callbacks
@@ -19,4 +21,12 @@ start_link() ->
 %% @spec init([]) -> SupervisorTree
 %% @doc supervisor callback.
 init([]) ->
-	{ok, {{one_for_one, 10, 10}, []}}.
+	Listener =
+	{yggdrasil_listener,
+		{yggdrasil_listener, start_link, []},
+		permanent,
+		brutal_kill,
+		worker,
+		[yggdrasil_listener]
+	},
+	{ok, {{one_for_one, 10, 10}, [Listener]}}.

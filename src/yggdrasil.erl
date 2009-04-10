@@ -2,19 +2,17 @@
 -author('cris.kiev@gmail.com').
 
 -behaviour(application).
--export([start/2, start/0, stop/1]).
+-export([start/2, start/0, stop/0, stop/1]).
 
-start() -> 
-	yggdrasil_sup:start_link().
-
-start(_Args) -> 
-	start().
-
-start(_Type, _Args) ->
-	start().
+start() ->
+	application:start(yggdrasil).
 
 stop() ->
-	ok.
+	application:stop(yggdrasil).
+
+start(normal, _Args) ->
+	{ok, Pid} = yggdrasil_sup:start_link(),
+	{ok, Pid}.
 
 stop(_State) ->
-	stop().
+	ok.

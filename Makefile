@@ -13,6 +13,7 @@ ERL = erl -boot start_clean
 # Edit the lines below
 MODS = src/yggdrasil \
 	   src/yggdrasil_sup \
+	   src/yggdrasil_receiver \
 	   src/yggdrasil_listener
 
 # The first target in any makefile is the default target.
@@ -32,10 +33,10 @@ compile: ${MODS:%=%.beam}
 ## run an application from the makefile
 
 run: compile
-	${ERL} -pa ./ -s odin
+	scripts/yggdrasil.sh
 
 nrun: compile
-	${ERL} -pa ./ -s odin -noshell
+	${ERL} -pa ./ -s yggdrasil -noshell
 
 # the subdirs target compiles any code in 
 # sub-directories
