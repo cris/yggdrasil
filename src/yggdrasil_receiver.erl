@@ -17,13 +17,12 @@
 %% FSM states
 -export([
 		'WAIT_FOR_SOCKET'/2,
-		'WAIT_FOR_AUTH'/2,
-		'WAIT_FOR_ACTION'/2
+		'WAIT_FOR_DATA'/2
 ]).
 
 -record(state, {
 		socket,  %% Client socket
-		player   %% Player pid
+		actor    %% Actor pid
 	}).
 
 -define(TIMEOUT, 120000).
@@ -70,34 +69,33 @@ init([]) ->
 %%-------------------------------------------------------------------------
 'WAIT_FOR_SOCKET'({socket_ready, Socket}, State) when is_port(Socket) ->
     % Now we own the socket
-    inet:setopts(Socket, [{active, once}, {packet, 0}, binary]),
+	%{ok, ActorPid} = yggdrasil_actor:new(Data),
+    inet:setopts(Socket, [{active, once}, {packet, 4}, binary]),
     %{ok, {IP, _Port}} = inet:peername(Socket),
-    {next_state, 'WAIT_FOR_AUTH', State#state{socket=Socket}, ?TIMEOUT};
+    {next_state, 'WAIT_FOR_DATA', State#state{socket=Socket}, ?TIMEOUT};
 'WAIT_FOR_SOCKET'(Other, State) ->
     error_logger:error_msg("State: 'WAIT_FOR_SOCKET'. Unexpected message: ~p\n", [Other]),
     %% Allow to receive async messages
     {next_state, 'WAIT_FOR_SOCKET', State}.
 
 %% Notification event coming from client
-%% Trying to authenticate
-'WAIT_FOR_AUTH'({data, Data}, #state{socket=S} = State) ->
-    ok = gen_tcp:send(S, Data),
-	{ok, PlayerPid} = yggdrasil_player:authorize_player(Data),
-    {next_state, 'WAIT_FOR_ACTION', State#state{player=PlayerPid}};
+'WAIT_FOR_DATA'({data, <<"test", Rest/binary>>}, #state{socket=Socket} = State) ->
+    ok = gen_tcp:send(Socket, <<"You know it!">>),
+	<<"cool\n\r">> = Rest,
+	%{ok, ActorPid} = yggdrasil_actor:authorize_player(Data),
+    {next_state, 'WAIT_FOR_DATA', State};
+'WAIT_FOR_DATA'({data, Data}, #state{socket=Socket} = State) ->
+    ok = gen_tcp:send(Socket, Data),
+	%{ok, ActorPid} = yggdrasil_actor:authorize_player(Data),
+    {next_state, 'WAIT_FOR_DATA', State};
 
-'WAIT_FOR_AUTH'(timeout, State) ->
+'WAIT_FOR_DATA'(timeout, State) ->
     error_logger:error_msg("~p Client connection timeout - closing.\n", [self()]),
     {stop, normal, State};
 
-'WAIT_FOR_AUTH'(Data, State) ->
+'WAIT_FOR_DATA'(Data, State) ->
     io:format("~p Ignoring data: ~p\n", [self(), Data]),
-    {next_state, 'WAIT_FOR_AUTH', State, ?TIMEOUT}.
-
-%% Receiving new actions from player
-'WAIT_FOR_ACTION'({data, Data}, #state{player = PlayerPid} = State) ->
-	case yggdrasil_player:process_message(PlayerPid, Data),
-    {next_state, 'WAIT_FOR_ACTION', State, ?TIMEOUT}.
-
+    {next_state, 'WAIT_FOR_DATA', State, ?TIMEOUT}.
 
 %%-------------------------------------------------------------------------
 %% Func: handle_event/3 (Event, StateName, StateData)
@@ -136,7 +134,8 @@ handle_info({tcp, Socket, Bin}, StateName, #state{socket=Socket} = StateData) ->
 
 handle_info({tcp_closed, Socket}, _StateName,
             #state{socket=Socket} = StateData) ->
-    error_logger:info_msg("~p Client ~p disconnected.\n", [self(), Addr]),
+	{ok, {IP, _Port}} = inet:peername(Socket),
+    error_logger:info_msg("~p Client ~p disconnected.\n", [self(), IP]),
     {stop, normal, StateData};
 
 handle_info(_Info, StateName, StateData) ->

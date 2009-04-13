@@ -18,19 +18,23 @@
 %%====================================================================
 %% API
 %%====================================================================
+%%-------------------------------------------------------------------------
 %% @spec start_link() -> {ok,Pid} | ignore | {error,Error}
 %% @doc  Called by a supervisor to start the listening process.
+%%-------------------------------------------------------------------------
 start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
+%%-------------------------------------------------------------------------
 %% @spec init(Args) -> {ok, State} |
 %%                     {ok, State, Timeout} |
 %%                     ignore               |
 %%                     {stop, Reason}
 %% @doc Initiates the server
+%%-------------------------------------------------------------------------
 init(_Opts) ->
 	process_flag(trap_exit, true),
 	error_logger:info_msg("listener: init ~p", [self()]),
@@ -51,14 +55,14 @@ init(_Opts) ->
     end.
 
 %%-------------------------------------------------------------------------
-%% Func: handle_call(Request, From, State) -> 
+%% @spec handle_call(Request, From, State) -> 
 %%                                      {reply, Reply, State} |
 %%                                      {reply, Reply, State, Timeout} |
 %%                                      {noreply, State} |
 %%                                      {noreply, State, Timeout} |
 %%                                      {stop, Reason, Reply, State} |
 %%                                      {stop, Reason, State}
-%% Purpose: Handling call messages
+%% @doc Handling call messages
 %% @private
 %%-------------------------------------------------------------------------
 handle_call({hi, Name}, _From, State) ->
@@ -69,10 +73,12 @@ handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
+%%-------------------------------------------------------------------------
 %% @spec handle_cast(Msg, State) -> {noreply, State} |
 %%                                  {noreply, State, Timeout} |
 %%                                  {stop, Reason, State}
 %% @doc  Handling cast messages
+%%-------------------------------------------------------------------------
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -89,7 +95,7 @@ handle_info({inet_async, ListSock, Ref, {ok, CliSocket}},
         end,
 
         %% New client connected - spawn a new process
-		{ok, Pid} = yggdrasil_receiver:start_link(),
+		{ok, Pid} = supervisor:start_child(yggdrasil_receiver_sup, []),
         gen_tcp:controlling_process(CliSocket, Pid),
         yggdrasil_receiver:set_socket(Pid, CliSocket),
 

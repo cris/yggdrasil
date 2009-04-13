@@ -13,6 +13,7 @@ ERL = erl -boot start_clean
 # Edit the lines below
 MODS = src/yggdrasil \
 	   src/yggdrasil_sup \
+	   src/yggdrasil_receiver_sup \
 	   src/yggdrasil_receiver \
 	   src/yggdrasil_listener
 

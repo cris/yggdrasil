@@ -29,4 +29,12 @@ init([]) ->
 		worker,
 		[yggdrasil_listener]
 	},
-	{ok, {{one_for_one, 10, 10}, [Listener]}}.
+	ReceiverSup = 
+	{yggdrasil_receiver_sup,
+		{yggdrasil_receiver_sup, start_link, []},
+		permanent,
+		infinity,
+		supervisor,
+		[yggdrasil_receiver_sup]
+	},
+	{ok, {{one_for_one, 10, 10}, [Listener, ReceiverSup]}}.
