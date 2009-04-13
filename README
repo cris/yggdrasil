@@ -1,0 +1,7 @@
+Yggdrasil
+The main purpose is to provide some simple and lightweight
+application server, that can be used to write solutions
+for messaging, gaming and other multi-user interoperability.
+
+Currently, project is in early development stage and can't be used
+for production.
