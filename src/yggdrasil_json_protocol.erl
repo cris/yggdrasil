@@ -9,29 +9,72 @@
 %% In "headers" you can put any header, like encoding or format.
 
 -export([
-		encode/1,
-		decode/1
-	]).
+        encode/1,
+        normalize_mochiweb_json/1,
+        decode/1
+    ]).
+
+-record(request, {
+        verb,
+        resource,
+        headers,
+        params
+    }).
 
 decode(Data) when is_binary(Data) -> 
-	{struct, List} = mochijson2:decode(Data),
-	Verb = extract_verb(List),
-	Resource = extract_resource(List),
-	{ok, Headers} = extract_headers(List),
-	{ok, Params} = extract_params(List),
-	{ok, #request{verb=Verb, resource=Resource, headers=Headers, params=Params}}.
+    Json = decode_json(Data), 
+    Verb     = extract_verb(Json),
+    Resource = extract_resource(Json),
+    Headers  = extract_headers(Json),
+    Params   = extract_params(Json),
+    {ok, #request{verb=Verb, resource=Resource, headers=Headers, params=Params}}.
 
-extract_verb(List) when is_list(List) ->
-	Value = proplists:get_value(<<"verb">>, List),
-	case Value of
-		<<"GET">> -> 'GET';
-		<<"POST">> -> 'POST';
-		<<"PUT">> -> 'PUT';
-		<<"DELETE">> -> 'DELETE';
-		<<"AUTH">> -> 'AUTH'
-			_ -> throw(incorrect_verb)
-	end.
+extract_verb(Json) when is_list(Json) ->
+    case proplists:get_value(<<"verb">>, Json) of
+        <<"GET">>    -> 'GET';
+        <<"POST">>   -> 'POST';
+        <<"PUT">>    -> 'PUT';
+        <<"DELETE">> -> 'DELETE';
+        <<"AUTH">>   -> 'AUTH';
+        _            -> throw(incorrect_verb)
+    end.
 
+extract_resource(Json) when is_list(Json) ->
+    case proplists:get_value(<<"resource">>, Json) of
+        undefined -> throw(incorrect_resource);
+        Value     -> Value
+    end.
+
+extract_headers(Json) when is_list(Json) ->
+    case proplists:get_value(<<"headers">>) of
+        undefined -> [{}];
+        Value     -> Value
+    end.
+
+extract_params(Json) when is_list(Json) -> 
+    case proplists:get_value(<<"params">>) of
+        [{_K,_V} | _T] = KVList -> KVList;
+        undefined               -> [{}];
+        _                       -> throw(incorrect_params)
+    end.
+
+encode(_T) -> ok.
+
+decode_json(Data) -> 
+    normalize_mochiweb_json(mochijson2:decode(Data)).
+
+normalize_mochiweb_json(V) when is_binary(V); is_number(V); is_atom(V) -> V;
+
+normalize_mochiweb_json({struct, []}) -> [{}];
+normalize_mochiweb_json({struct, KVList}) ->
+    normalize_mochiweb_json(KVList);
+
+normalize_mochiweb_json([{K,V}|TList]) ->
+    [{K,normalize_mochiweb_json(V)} | normalize_mochiweb_json(TList)];
+
+normalize_mochiweb_json([]) -> [];
+normalize_mochiweb_json([H|TList]) -> 
+    [normalize_mochiweb_json(H) | normalize_mochiweb_json(TList)].
 
 
 

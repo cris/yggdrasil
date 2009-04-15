@@ -2,28 +2,28 @@
 
 -behaviour(gen_fsm).
 -export([init/1,
-		handle_event/3,
-		handle_sync_event/4,
-		handle_info/3,
-		terminate/3,
-		code_change/4]).
+        handle_event/3,
+        handle_sync_event/4,
+        handle_info/3,
+        terminate/3,
+        code_change/4]).
 
 %% API
 -export([
-		start_link/0,
-		set_socket/2
-	]).
+        start_link/0,
+        set_socket/2
+    ]).
 
 %% FSM states
 -export([
-		'WAIT_FOR_SOCKET'/2,
-		'WAIT_FOR_DATA'/2
+        'WAIT_FOR_SOCKET'/2,
+        'WAIT_FOR_DATA'/2
 ]).
 
 -record(state, {
-		socket,  %% Client socket
-		actor    %% Actor pid
-	}).
+        socket,  %% Client socket
+        actor    %% Actor pid
+    }).
 
 -define(TIMEOUT, 120000).
 
@@ -69,7 +69,7 @@ init([]) ->
 %%-------------------------------------------------------------------------
 'WAIT_FOR_SOCKET'({socket_ready, Socket}, State) when is_port(Socket) ->
     % Now we own the socket
-	%{ok, ActorPid} = yggdrasil_actor:new(Data),
+    %{ok, ActorPid} = yggdrasil_actor:new(Data),
     inet:setopts(Socket, [{active, once}, {packet, 4}, binary]),
     %{ok, {IP, _Port}} = inet:peername(Socket),
     {next_state, 'WAIT_FOR_DATA', State#state{socket=Socket}, ?TIMEOUT};
@@ -81,12 +81,12 @@ init([]) ->
 %% Notification event coming from client
 'WAIT_FOR_DATA'({data, <<"test", Rest/binary>>}, #state{socket=Socket} = State) ->
     ok = gen_tcp:send(Socket, <<"You know it!">>),
-	<<"cool\n\r">> = Rest,
-	%{ok, ActorPid} = yggdrasil_actor:authorize_player(Data),
+    <<"cool\n\r">> = Rest,
+    %{ok, ActorPid} = yggdrasil_actor:authorize_player(Data),
     {next_state, 'WAIT_FOR_DATA', State};
 'WAIT_FOR_DATA'({data, Data}, #state{socket=Socket} = State) ->
     ok = gen_tcp:send(Socket, Data),
-	%{ok, ActorPid} = yggdrasil_actor:authorize_player(Data),
+    %{ok, ActorPid} = yggdrasil_actor:authorize_player(Data),
     {next_state, 'WAIT_FOR_DATA', State};
 
 'WAIT_FOR_DATA'(timeout, State) ->
@@ -134,7 +134,7 @@ handle_info({tcp, Socket, Bin}, StateName, #state{socket=Socket} = StateData) ->
 
 handle_info({tcp_closed, Socket}, _StateName,
             #state{socket=Socket} = StateData) ->
-	{ok, {IP, _Port}} = inet:peername(Socket),
+    {ok, {IP, _Port}} = inet:peername(Socket),
     error_logger:info_msg("~p Client ~p disconnected.\n", [self(), IP]),
     {stop, normal, StateData};
 

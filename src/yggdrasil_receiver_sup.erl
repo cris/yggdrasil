@@ -11,8 +11,8 @@
 %% @doc API for starting the supervisor.
 %%----------------------------------------------------------------------
 start_link() -> 
-	error_logger:info_msg("Receiver supervisor"),
-	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    error_logger:info_msg("Receiver supervisor"),
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 %%----------------------------------------------------------------------
 %% Supervisor behaviour callbacks
@@ -23,12 +23,12 @@ start_link() ->
 %% @doc supervisor callback.
 %%----------------------------------------------------------------------
 init([]) ->
-	Receiver =
-	{yggdrasil_receiver,
-		{yggdrasil_receiver, start_link, []},
-		temporary,
-		brutal_kill,
-		worker,
-		[yggdrasil_receiver]
-	},
-	{ok, {{simple_one_for_one, 10, 10}, [Receiver]}}.
+    Receiver =
+    {yggdrasil_receiver,
+        {yggdrasil_receiver, start_link, []},
+        temporary,
+        brutal_kill,
+        worker,
+        [yggdrasil_receiver]
+    },
+    {ok, {{simple_one_for_one, 10, 10}, [Receiver]}}.

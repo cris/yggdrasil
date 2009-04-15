@@ -9,10 +9,10 @@
 %% @spec start_link() -> ServerRet
 %% @doc API for starting the supervisor.
 start_link() -> 
-	error_logger:info_msg("Supervisor!"),
-	Result = supervisor:start_link({local, ?MODULE}, ?MODULE, []),
-	io:format("Result: ~p~n", [Result]),
-	Result.
+    error_logger:info_msg("Supervisor!"),
+    Result = supervisor:start_link({local, ?MODULE}, ?MODULE, []),
+    io:format("Result: ~p~n", [Result]),
+    Result.
 
 %%----------------------------------------------------------------------
 %% Supervisor behaviour callbacks
@@ -21,20 +21,20 @@ start_link() ->
 %% @spec init([]) -> SupervisorTree
 %% @doc supervisor callback.
 init([]) ->
-	Listener =
-	{yggdrasil_listener,
-		{yggdrasil_listener, start_link, []},
-		permanent,
-		brutal_kill,
-		worker,
-		[yggdrasil_listener]
-	},
-	ReceiverSup = 
-	{yggdrasil_receiver_sup,
-		{yggdrasil_receiver_sup, start_link, []},
-		permanent,
-		infinity,
-		supervisor,
-		[yggdrasil_receiver_sup]
-	},
-	{ok, {{one_for_one, 10, 10}, [Listener, ReceiverSup]}}.
+    Listener =
+    {yggdrasil_listener,
+        {yggdrasil_listener, start_link, []},
+        permanent,
+        brutal_kill,
+        worker,
+        [yggdrasil_listener]
+    },
+    ReceiverSup = 
+    {yggdrasil_receiver_sup,
+        {yggdrasil_receiver_sup, start_link, []},
+        permanent,
+        infinity,
+        supervisor,
+        [yggdrasil_receiver_sup]
+    },
+    {ok, {{one_for_one, 10, 10}, [Listener, ReceiverSup]}}.

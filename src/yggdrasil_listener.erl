@@ -2,7 +2,7 @@
 
 -behaviour(gen_server).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-	     terminate/2, code_change/3]).
+         terminate/2, code_change/3]).
 
 -export([start_link/0]).
 
@@ -10,10 +10,10 @@
 -define(DEFAULT_PORT, 4990).
 
 -record(state, {
-		listener, % Listening socket
-		acceptor, % Asynchronous acceptor's internal reference
-		module    % FSM handling module
-	}).
+        listener, % Listening socket
+        acceptor, % Asynchronous acceptor's internal reference
+        module    % FSM handling module
+    }).
 
 %%====================================================================
 %% API
@@ -23,7 +23,7 @@
 %% @doc  Called by a supervisor to start the listening process.
 %%-------------------------------------------------------------------------
 start_link() ->
-	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 %%====================================================================
 %% gen_server callbacks
@@ -36,13 +36,13 @@ start_link() ->
 %% @doc Initiates the server
 %%-------------------------------------------------------------------------
 init(_Opts) ->
-	process_flag(trap_exit, true),
-	error_logger:info_msg("listener: init ~p", [self()]),
-	{Host, Port} = {?DEFAULT_HOST, ?DEFAULT_PORT},
-	{ok, IpAddr} = inet:getaddr(Host, inet),
-	error_logger:info_msg("IP:: ~p", [IpAddr]),
-	SockOpts = [binary, {ip, IpAddr}, {packet, 0},
-		{reuseaddr, false}, {active, false}],
+    process_flag(trap_exit, true),
+    error_logger:info_msg("listener: init ~p", [self()]),
+    {Host, Port} = {?DEFAULT_HOST, ?DEFAULT_PORT},
+    {ok, IpAddr} = inet:getaddr(Host, inet),
+    error_logger:info_msg("IP:: ~p", [IpAddr]),
+    SockOpts = [binary, {ip, IpAddr}, {packet, 0},
+        {reuseaddr, false}, {active, false}],
     case gen_tcp:listen(Port, SockOpts) of
     {ok, ListenSocket} ->
         %%Create first accepting process
@@ -66,7 +66,7 @@ init(_Opts) ->
 %% @private
 %%-------------------------------------------------------------------------
 handle_call({hi, Name}, _From, State) ->
-	error_logger:info_msg("listener: hi ~p~n", [Name]),
+    error_logger:info_msg("listener: hi ~p~n", [Name]),
     Reply = ok,
     {reply, Reply, State};
 handle_call(_Request, _From, State) ->
@@ -95,12 +95,12 @@ handle_info({inet_async, ListSock, Ref, {ok, CliSocket}},
         end,
 
         %% New client connected - spawn a new process
-		{ok, Pid} = supervisor:start_child(yggdrasil_receiver_sup, []),
+        {ok, Pid} = supervisor:start_child(yggdrasil_receiver_sup, []),
         gen_tcp:controlling_process(CliSocket, Pid),
         yggdrasil_receiver:set_socket(Pid, CliSocket),
 
         %% Signal the network driver that we are ready
-		%% to accept another connection
+        %% to accept another connection
         case prim_inet:async_accept(ListSock, -1) of
             {ok,    NewRef} -> ok;
             {error, NewRef} -> exit({async_accept, inet:format_error(NewRef)})
@@ -113,7 +113,7 @@ handle_info({inet_async, ListSock, Ref, {ok, CliSocket}},
     end;
 
 handle_info({inet_async, ListSock, Ref, Error},
-			#state{listener=ListSock, acceptor=Ref} = State) ->
+            #state{listener=ListSock, acceptor=Ref} = State) ->
     error_logger:error_msg("Error in socket acceptor: ~p.\n", [Error]),
     {stop, Error, State};
 
@@ -130,7 +130,7 @@ handle_info(Info, State) ->
 %% @private
 %%-------------------------------------------------------------------------
 terminate(_Reason, State) ->
-	gen_tcp:close(State#state.listener),
+    gen_tcp:close(State#state.listener),
     ok.
 
 %%-------------------------------------------------------------------------
