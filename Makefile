@@ -15,7 +15,14 @@ MODS = src/yggdrasil \
 	   src/yggdrasil_sup \
 	   src/yggdrasil_receiver_sup \
 	   src/yggdrasil_receiver \
-	   src/yggdrasil_listener
+	   src/yggdrasil_json_protocol \
+	   src/yggdrasil_listener \
+	   src/yggdrasil_router \
+	   src/yggdrasil_actor_sup \
+	   src/yggdrasil_actor \
+	   src/yggdrasil_utils \
+	   src/yggslot_server \
+	   src/mochijson2
 
 # The first target in any makefile is the default target.
 # If you just type "make" then "make all" is assumed (because

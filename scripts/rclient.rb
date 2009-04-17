@@ -23,7 +23,7 @@ class RClient
 	def send_loop
 		while true
 			print "Enter: "
-			rvalue = gets
+			rvalue = gets.strip
 			self.send(rvalue)
 			value = self.read
 			puts "Size: #{value.size}"

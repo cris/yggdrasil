@@ -17,12 +17,6 @@
     ]).
 
 -record(state, {}).
--record(request, {
-        verb,
-        resource,
-        headers,
-        params
-    }).
 
 %-define(IS_WORD_CHAR(C), $A).
 

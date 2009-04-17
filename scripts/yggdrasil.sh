@@ -1,6 +1,6 @@
 #!/bin/sh
 
-erl \
+ledit -x -h ~/.erl_history erl \
 	-pa "`dirname $0`/../ebin" \
 	-s yggdrasil \
 	-sname yggdrasil \

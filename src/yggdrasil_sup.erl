@@ -21,13 +21,13 @@ start_link() ->
 %% @spec init([]) -> SupervisorTree
 %% @doc supervisor callback.
 init([]) ->
-    Listener =
-    {yggdrasil_listener,
-        {yggdrasil_listener, start_link, []},
+    ActorSup = 
+    {yggdrasil_actor_sup,
+        {yggdrasil_actor_sup, start_link, []},
         permanent,
-        brutal_kill,
-        worker,
-        [yggdrasil_listener]
+        infinity,
+        supervisor,
+        [yggdrasil_actor_sup]
     },
     ReceiverSup = 
     {yggdrasil_receiver_sup,
@@ -37,4 +37,12 @@ init([]) ->
         supervisor,
         [yggdrasil_receiver_sup]
     },
-    {ok, {{one_for_one, 10, 10}, [Listener, ReceiverSup]}}.
+    Listener =
+    {yggdrasil_listener,
+        {yggdrasil_listener, start_link, []},
+        permanent,
+        brutal_kill,
+        worker,
+        [yggdrasil_listener]
+    },
+    {ok, {{one_for_one, 10, 10}, [ActorSup, ReceiverSup, Listener]}}.

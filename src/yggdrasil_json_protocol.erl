@@ -8,18 +8,13 @@
 %%
 %% In "headers" you can put any header, like encoding or format.
 
+-include("yggdrasil.hrl").
+
 -export([
         encode/1,
-        normalize_mochiweb_json/1,
         decode/1
     ]).
 
--record(request, {
-        verb,
-        resource,
-        headers,
-        params
-    }).
 
 decode(Data) when is_binary(Data) -> 
     Json = decode_json(Data), 
@@ -46,13 +41,14 @@ extract_resource(Json) when is_list(Json) ->
     end.
 
 extract_headers(Json) when is_list(Json) ->
-    case proplists:get_value(<<"headers">>) of
-        undefined -> [{}];
-        Value     -> Value
+    case proplists:get_value(<<"headers">>, Json) of
+        [{_K,_V} | _T] = KVList -> KVList;
+        undefined               -> [{}];
+        _                       -> throw(incorrect_headers)
     end.
 
 extract_params(Json) when is_list(Json) -> 
-    case proplists:get_value(<<"params">>) of
+    case proplists:get_value(<<"params">>, Json) of
         [{_K,_V} | _T] = KVList -> KVList;
         undefined               -> [{}];
         _                       -> throw(incorrect_params)

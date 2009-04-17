@@ -5,7 +5,9 @@
 	  yggdrasil,
 	  yggdrasil_sup,
 	  yggdrasil_listener,
-	  yggdrasil_receiver
+	  yggdrasil_receiver,
+          yggdrasil_json_protocol,
+          mochijson2
       ]},
   {registered, [
 	  yggdrasil,
