@@ -24,7 +24,7 @@ start_link() ->
 init(_Opts) ->
     {ok, #state{areas = [], guests = [], actors = []}}.
 
-handle_call({'PUT', guests}, _From, State) ->
+handle_call({'PUT', actors}, _From, State) ->
     error_logger:info_msg("listener: hi ~p~n", [Name]),
     Reply = ok,
     {reply, Reply, State};

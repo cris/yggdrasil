@@ -61,4 +61,5 @@ init([]) ->
         worker,
         [yggdrasil_listener]
     },
-    {ok, {{one_for_one, 10, 10}, [ActorSup, ReceiverSup, Listener]}}.
+    {ok, {{one_for_one, 10, 10},
+            [WorldResource, GuestSup, ActorSup, ReceiverSup, Listener]}}.

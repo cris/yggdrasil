@@ -38,8 +38,8 @@
 %%      respectively.
 %% @end
 %%-------------------------------------------------------------------------
-start_link() ->
-    gen_fsm:start_link(?MODULE, [], []).
+start_link(Socket) ->
+    gen_fsm:start_link(?MODULE, Socket, []).
 
 %%%----------------------------------------------------------------------
 %%% Callbacks for gen_fsm
@@ -52,8 +52,8 @@ start_link() ->
 %%          {stop, StopReason}
 %% @private
 %%-------------------------------------------------------------------------
-init([]) ->
-    {ok, wait_for_action, #state{}}.
+init(Socket) ->
+    {ok, wait_for_action, #state{socket=Socket}}.
 
 %%-------------------------------------------------------------------------
 %% Func: handle_event/3 (Event, StateName, StateData)

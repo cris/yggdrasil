@@ -20,8 +20,7 @@
 %% FSM states
 -export([
         'WAIT_FOR_SOCKET'/2,
-        'WAIT_AS_GUEST'/2,
-        'WAIT_AS_ACTOR'/2
+        'WAIT_FOR_DATA'/2
 ]).
 
 
@@ -77,48 +76,33 @@ init([]) ->
     %{ok, ActorPid} = yggdrasil_actor:new(Data),
     inet:setopts(Socket, [{active, once}, {packet, 4}, binary]),
     %{ok, {IP, _Port}} = inet:peername(Socket),
-    %GuestActor = yggdrasil_server:
-    {next_state, 'WAIT_AS_GUEST', State#state{socket=Socket}, ?TIMEOUT};
+    GuestActor = supervisor:start_child(yggdrasil_guest_sup, [Socket]),
+    {next_state, 'WAIT_FOR_DATA', State#state{socket=Socket, actor=GuestActor}, ?TIMEOUT};
 'WAIT_FOR_SOCKET'(Other, State) ->
     error_logger:error_msg("State: 'WAIT_FOR_SOCKET'. Unexpected message: ~p\n", [Other]),
     %% Allow to receive async messages
     {next_state, 'WAIT_FOR_SOCKET', State}.
 
-'WAIT_AS_GUEST'({data, Data}, #state{socket=Socket} = State) ->
+'WAIT_FOR_DATA'({data, Data}, #state{socket=Socket} = State) ->
     {ok, Request} = yggdrasil_json_protocol:decode(Data),
     Echo = io_lib:format("Verb: ~p Resource: ~p ~n",
                          [Request#request.verb, Request#request.resource]),
     ok = gen_tcp:send(Socket, Echo),
     case yggdrasil_router:route_guest(Request#request{socket=Socket}) of
         {actor, ActorPid} ->
-            {next_state, 'WAIT_AS_ACTOR', State#state{actor=ActorPid}};
-        {guest, GuestPid} -> 
-            {next_state, 'WAIT_AS_GUEST', State}
+            {next_state, 'WAIT_FOR_DATA', State#state{actor=ActorPid}};
+        next -> 
+            {next_state, 'WAIT_FOR_DATA', State}
     end;
 
-'WAIT_AS_GUEST'(timeout, State) ->
+'WAIT_FOR_DATA'(timeout, State) ->
     error_logger:error_msg("~p Client connection timeout - closing.\n", [self()]),
     {stop, normal, State};
 
-'WAIT_AS_GUEST'(Data, State) ->
+'WAIT_FOR_DATA'(Data, State) ->
     io:format("~p Ignoring data: ~p\n", [self(), Data]),
-    {next_state, 'WAIT_AS_GUEST', State, ?TIMEOUT}.
+    {next_state, 'WAIT_FOR_DATA', State, ?TIMEOUT}.
 
-%% Notification event coming from client
-'WAIT_AS_ACTOR'({data, Data}, #state{socket=Socket, actor=ActorPid} = State) ->
-    {ok, Request} = yggdrasil_json_protocol:decode(Data),
-    Echo = io_lib:format("Verb: ~p Resource: ~p ~n", [Request#request.verb, Request#request.resource]),
-    ok = gen_tcp:send(Socket, Echo),
-    yggdrasil_router:route_actor(Request#request{actor=ActorPid, socket=Socket}),
-    {next_state, 'WAIT_AS_ACTOR', State};
-
-'WAIT_AS_ACTOR'(timeout, State) ->
-    error_logger:error_msg("~p Client connection timeout - closing.\n", [self()]),
-    {stop, normal, State};
-
-'WAIT_AS_ACTOR'(Data, State) ->
-    io:format("~p Ignoring data: ~p\n", [self(), Data]),
-    {next_state, 'WAIT_AS_ACTOR', State, ?TIMEOUT}.
 
 %%-------------------------------------------------------------------------
 %% Func: handle_event/3 (Event, StateName, StateData)
