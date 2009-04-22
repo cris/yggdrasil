@@ -9,12 +9,20 @@
 %% In "headers" you can put any header, like encoding or format.
 
 -include("yggdrasil.hrl").
+-include("routes.hrl").
+-include("parser.hrl").
 
 -export([
         encode/1,
-        decode/1
+        decode/1,
+        decode_resource/1
     ]).
 
+
+%%%------------------------------------------------------------------------
+%%% API
+%%%------------------------------------------------------------------------
+encode(_T) -> ok.
 
 decode(Data) when is_binary(Data) -> 
     Json = decode_json(Data), 
@@ -24,6 +32,66 @@ decode(Data) when is_binary(Data) ->
     Params   = extract_params(Json),
     {ok, #request{verb=Verb, resource=Resource, headers=Headers, params=Params}}.
 
+decode_resource(Bin) when is_binary(Bin) ->
+    BinList = split_resource(Bin),
+    _AtomList = prepare_resource(BinList).
+
+%%%------------------------------------------------------------------------
+%%% private 
+%%%------------------------------------------------------------------------
+
+%% split binary by string
+split_resource(Bin) ->
+    lists:reverse(split_resource(Bin, <<>>, [])).
+
+split_resource(<<$/, Rest/binary>>, <<>>, []) ->
+    split_resource(Rest, <<>>, []);
+
+split_resource(<<$/, N, Rest/binary>>, Element, Parts) when ?IS_NUMBER_CHAR(N) ->
+    {Number, NewRest} = split_resource_number(Rest, <<N>>),
+    split_resource(NewRest, <<>>,
+        [{Element, yggdrasil_utils:binary_to_integer(Number)} | Parts]);
+
+split_resource(<<C, Rest/binary>>, Acc, Parts) when ?IS_LWORD_CHAR(C) ->
+    split_resource(Rest, <<Acc/binary, C>>, Parts);
+
+split_resource(<<$/, Rest/binary>>, Element, Parts) ->
+    split_resource(Rest, <<>>, [Element | Parts]);
+
+split_resource(<<$/>>, <<>>, Parts) -> 
+    Parts;
+split_resource(<<$/>>, Element, Parts) ->
+    [Element | Parts];
+
+split_resource(<<>>, <<>>, Parts) -> 
+    Parts;
+split_resource(<<>>, Element, Parts) -> 
+    [Element | Parts].
+
+% parse number part
+split_resource_number(<<N, Rest/binary>>, Acc) when ?IS_NUMBER_CHAR(N) ->
+    split_resource_number(Rest, <<Acc/binary, N>>);
+
+split_resource_number(<<$/, Rest/binary>>, Acc) ->
+    {Acc, Rest};
+    
+split_resource_number(<<>>, Acc) ->
+    {Acc, <<>>};
+
+split_resource_number(_Bin, _Acc) ->
+    throw(incorrect_resource).
+
+prepare_resource(BinList) when is_list(BinList) ->
+    lists:map(
+        fun({X, Number}) -> 
+                {yggdrasil_utils:binary_to_atom(X), Number};
+        (X) ->
+                yggdrasil_utils:binary_to_atom(X)
+        end,
+        BinList
+    ).
+
+%% get verb
 extract_verb(Json) when is_list(Json) ->
     case proplists:get_value(<<"verb">>, Json) of
         <<"GET">>    -> 'GET';
@@ -37,7 +105,7 @@ extract_verb(Json) when is_list(Json) ->
 extract_resource(Json) when is_list(Json) ->
     case proplists:get_value(<<"resource">>, Json) of
         undefined -> throw(incorrect_resource);
-        Value     -> Value
+        Value     -> decode_resource(Value)
     end.
 
 extract_headers(Json) when is_list(Json) ->
@@ -54,7 +122,6 @@ extract_params(Json) when is_list(Json) ->
         _                       -> throw(incorrect_params)
     end.
 
-encode(_T) -> ok.
 
 decode_json(Data) -> 
     normalize_mochiweb_json(mochijson2:decode(Data)).

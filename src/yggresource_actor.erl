@@ -1,4 +1,4 @@
--module(yggdrasil_actor).
+-module(yggresource_actor).
 -author('cris.kiev@gmail.com').
 
 -include("yggdrasil.hrl").

@@ -21,13 +21,29 @@ start_link() ->
 %% @spec init([]) -> SupervisorTree
 %% @doc supervisor callback.
 init([]) ->
-    ActorSup = 
-    {yggdrasil_actor_sup,
-        {yggdrasil_actor_sup, start_link, []},
+    WorldResource =
+    {yggresource_world,
+        {yggresource_world, start_link, []},
+        permanent,
+        brutal_kill,
+        worker,
+        [yggresource_world]
+    },
+    GuestSup = 
+    {yggresource_guest_sup,
+        {yggresource_guest_sup, start_link, []},
         permanent,
         infinity,
         supervisor,
-        [yggdrasil_actor_sup]
+        [yggresource_guest_sup]
+    },
+    ActorSup = 
+    {yggresource_actor_sup,
+        {yggresource_actor_sup, start_link, []},
+        permanent,
+        infinity,
+        supervisor,
+        [yggresource_actor_sup]
     },
     ReceiverSup = 
     {yggdrasil_receiver_sup,

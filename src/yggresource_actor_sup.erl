@@ -1,4 +1,4 @@
--module(yggdrasil_actor_sup).
+-module(yggresource_actor_sup).
 -author('cris.kiev@gmail.com').
 
 -include("yggdrasil.hrl").
@@ -29,12 +29,12 @@ start_link() ->
 %% @doc supervisor callback.
 %%----------------------------------------------------------------------
 init([]) ->
-    Receiver =
-    {yggdrasil_actor,
-        {yggdrasil_actor, start_link, []},
+    Actor =
+    {yggresource_actor,
+        {yggresource_actor, start_link, []},
         temporary,
         brutal_kill,
         worker,
-        [yggdrasil_actor]
+        [yggresource_actor]
     },
-    {ok, {{simple_one_for_one, 10, 10}, [Receiver]}}.
+    {ok, {{simple_one_for_one, 10, 10}, [Actor]}}.
