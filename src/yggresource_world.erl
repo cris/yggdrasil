@@ -12,9 +12,9 @@
     ]).
 
 -record(state, {
-        guests,
-        actors,
-        areas
+        guests = [],
+        actors = [],
+        areas  = []
     }).
 
 
@@ -24,9 +24,8 @@ start_link() ->
 init(_Opts) ->
     {ok, #state{areas = [], guests = [], actors = []}}.
 
-handle_call({'PUT', actors}, _From, State) ->
-    error_logger:info_msg("listener: hi ~p~n", [Name]),
-    Reply = ok,
+handle_call({'PUT', actors, _Request}, _From, State) ->
+    error_logger:info_msg("listener: hi ~p~n", ["Put actors"]),
     {reply, Reply, State};
 handle_call(_Request, _From, State) ->
     Reply = ok,
@@ -39,8 +38,7 @@ handle_info(Info, State) ->
     error_logger:error_msg("Unexpected experience: ~p.\n", [Info]),
     {noreply, State}.
 
-terminate(_Reason, State) ->
-    gen_tcp:close(State#state.listener),
+terminate(_Reason, _State) ->
     ok.
 
 code_change(_OldVsn, State, _Extra) ->

@@ -1,15 +1,9 @@
-%% Yggdrasil comman record and macro definition
+%% Yggdrasil common record and macro definitions
 
 -record(request, {
         verb,
         resource,
         headers,
         params,
-        actor,
-        socket
-    }).
-
--record(actor, {
-        login,
-        socket
+        actor
     }).

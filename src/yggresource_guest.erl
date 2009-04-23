@@ -1,4 +1,4 @@
--module(yggresource_actor).
+-module(yggresource_guest).
 -author('cris.kiev@gmail.com').
 
 -include("yggdrasil.hrl").
@@ -13,16 +13,18 @@
 
 %% FSM states
 -export([
-        wait_for_action/2
+        'WAIT_FOR_ACTION'/2,
+        'WAIT_FOR_ACTION'/3
 ]).
 
 %% API
 -export([
-        start_link/0
+        start_link/1
     ]).
 
 -record(state, {
         receiver,
+        socket,
         login
     }).
 
@@ -30,7 +32,7 @@
 %%% API
 %%%------------------------------------------------------------------------
 %%-------------------------------------------------------------------------
-%% @spec () -> {ok,Pid} | ignore | {error,Error}
+%% @spec (Socket) -> {ok,Pid} | ignore | {error,Error}
 %% @doc To be called by the supervisor in order to start the server.
 %%      If init/1 fails with Reason, the function returns {error,Reason}.
 %%      If init/1 returns {stop,Reason} or ignore, the process is
@@ -53,7 +55,7 @@ start_link(Socket) ->
 %% @private
 %%-------------------------------------------------------------------------
 init(Socket) ->
-    {ok, wait_for_action, #state{socket=Socket}}.
+    {ok, 'WAIT_FOR_ACTION', #state{socket=Socket}}.
 
 %%-------------------------------------------------------------------------
 %% Func: handle_event/3 (Event, StateName, StateData)
@@ -116,6 +118,40 @@ code_change(_OldVsn, StateName, StateData, _Extra) ->
 %%          {stop, Reason, NewStateData}
 %% @private
 %%-------------------------------------------------------------------------
-wait_for_action(_Request, State) -> 
-    error_logger:info_msg("Actor in game.~p\n", [State]),
-    {next_state, wait_for_action, State}.
+'WAIT_FOR_ACTION'({request, Request}, State) -> 
+    error_logger:info_msg("Guest in game.~p\n", [Request]),
+    {next_state, 'WAIT_FOR_ACTION', State};
+
+'WAIT_FOR_ACTION'(_Request, State) -> 
+    error_logger:info_msg("Guest in game.~p\n", [State]),
+    {next_state, 'WAIT_FOR_ACTION', State}.
+%%-------------------------------------------------------------------------
+%% Func: StateName/3 (Request, From, State)
+%% Returns: {reply, Reply, NextStateName, NewStateData} |
+%%          {reply, Reply, NextStateName, NewStateData, Timeout} |
+%%          {reply, Reply,  NextStateName,  NewStateData,  hibernate} |
+%%          {next_state, NextStateName, NewStateData} |
+%%          {next_state, NextStateName, NewStateData, Timeout} |
+%%          {next_state, NextStateName, NewStateData, hibernate} |
+%%          {stop, Reason, Reply, NewStateData} |
+%%          {stop, Reason, NewStateData}
+%% @private
+%%-------------------------------------------------------------------------
+'WAIT_FOR_ACTION'({request, #request{verb=Verb, resource=Route}=Request},
+    _From, ) -> 
+    error_logger:info_msg("Guest in game.~p\n", [State]),
+    error_logger:info_msg("Guest in game.~p\n", [Request]),
+    Reply = action(Verb, Route, Request, State),
+    {reply, Reply, 'WAIT_FOR_ACTION', State}.
+
+
+action('PUT', [world, actors], Request, #state{receiver=Receiver}=State) ->
+    {ok, ActorPid} = supervisor:start_child(yggresource_actor_sup, [Receiver]),
+    gen_server:call(yggresource_world, {'PUT', actors, ActorPid});
+
+action(_Verb, _Route, Request, State) ->
+    error_logger:error_msg("Incorrect guest request.~p\n", [Request]),
+    next.
+
+
+
