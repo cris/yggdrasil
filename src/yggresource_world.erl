@@ -24,9 +24,17 @@ start_link() ->
 init(_Opts) ->
     {ok, #state{areas = [], guests = [], actors = []}}.
 
-handle_call({'PUT', actors, _Request}, _From, State) ->
-    error_logger:info_msg("listener: hi ~p~n", ["Put actors"]),
+handle_call({'PUT', actors, {Login, Password}}, ActorPid, State) ->
+    case Reply = check_actor(Login, Password) of
+        ok ->
+            NewState = update_state(guest_to_actor, ActorPid, State1);
+        {change_actor, ActorPid} ->
+            NewState = update_state(remove_guest, ActorPid, State);
+        _ ->
+            NewState = State
+    end,
     {reply, Reply, State};
+
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -47,20 +55,39 @@ code_change(_OldVsn, State, _Extra) ->
 %%%------------------------------------------------------------------------
 %%% Internal functions
 %%%------------------------------------------------------------------------
-actors('PUT', Params, _Request) ->
+check_actor(Login, Password) ->
     {Login, Password} = yggdrasil_utils:get([login, password], Params),
-    error_logger:info_msg("Route: server/actors: ~p\n", [Login]),
-    check_credentials(Login, Password).
+    error_logger:info_msg("Route: PUT /world/actors: ~p\n", [Login]),
+    case check_credentials(Login, Password) of
+        ok -> 
+            {ok, ActorPid} = supervisor:start_child(yggdrasil_actor_sup, []),
+        {error, Reason}=Result ->
+            Result
+    end.
 
 
-%% private API
+%%%------------------------------------------------------------------------
+%%% private API
+%%%------------------------------------------------------------------------
+%% stub 
 check_credentials(Login, Password) ->
     if 
         Login =:= <<"user">> andalso Password =:= <<"pass">> ->
-            {ok, ActorPid} = supervisor:start_child(yggdrasil_actor_sup, []),
-            {actor, ActorPid};
+            ok
         true -> 
-            guest
+            {error, incorrect_credentials}
     end.
 
+update_state(guest_to_actor, GuestPid, State) ->
+    update_state(remove_guest, GuestPid, State),
+    update_state(add_actor, GuestPid, State).
+
+update_state(remove_guest, GuestPid, State) ->
+    NGuestList = delete(GuestPid, State#state.guests),
+    State#state{guests=NGuestList}.
+
+
+update_state(add_actor, ActorPid, State) ->
+    NActorList = [ActorPid | State#state.guests)],
+    State#state{actors=NActorList}.
 

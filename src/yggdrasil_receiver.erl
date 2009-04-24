@@ -76,12 +76,14 @@ init([]) ->
     %{ok, ActorPid} = yggdrasil_actor:new(Data),
     inet:setopts(Socket, [{active, once}, {packet, 4}, binary]),
     %{ok, {IP, _Port}} = inet:peername(Socket),
-    {ok, GuestActor} = supervisor:start_child(yggresource_guest_sup, [Socket]),
+    {ok, GuestActor} = supervisor:start_child(yggresource_actor_sup, [Socket]),
     {next_state, 'WAIT_FOR_DATA', State#state{socket=Socket, actor=GuestActor}, ?TIMEOUT};
+
 'WAIT_FOR_SOCKET'(Other, State) ->
     error_logger:error_msg("State: 'WAIT_FOR_SOCKET'. Unexpected message: ~p\n", [Other]),
     %% Allow to receive async messages
     {next_state, 'WAIT_FOR_SOCKET', State}.
+
 
 'WAIT_FOR_DATA'({data, Data}, #state{socket=Socket, actor=Actor} = State) ->
     {ok, Request} = yggdrasil_json_protocol:decode(Data),

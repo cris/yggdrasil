@@ -145,9 +145,9 @@ code_change(_OldVsn, StateName, StateData, _Extra) ->
     {reply, Reply, 'WAIT_FOR_ACTION', State}.
 
 
-action('PUT', [world, actors], Request, #state{receiver=Receiver}=State) ->
-    {ok, ActorPid} = supervisor:start_child(yggresource_actor_sup, [Receiver]),
-    gen_server:call(yggresource_world, {'PUT', actors, ActorPid});
+action('PUT', [world, actors], #request{params=Params}, #state{receiver=Receiver}=State) ->
+    Login_Password = yggdrasil_utils:get([login, password], Params),
+    gen_server:call(yggresource_world, {'PUT', actors, Login_Password});
 
 action(_Verb, _Route, Request, State) ->
     error_logger:error_msg("Incorrect guest request.~p\n", [Request]),
