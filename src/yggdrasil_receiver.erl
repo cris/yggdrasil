@@ -91,10 +91,12 @@ init([]) ->
                          [Request#request.verb, Request#request.resource]),
     ok = gen_tcp:send(Socket, Echo),
     case gen_fsm:sync_send_event(Actor, {request, Request}) of
+        next -> 
+            {next_state, 'WAIT_FOR_DATA', State};
         {actor, ActorPid} ->
             {next_state, 'WAIT_FOR_DATA', State#state{actor=ActorPid}};
-        next -> 
-            {next_state, 'WAIT_FOR_DATA', State}
+        quit ->
+            {stop, should_quit, State}
     end;
 
 'WAIT_FOR_DATA'(timeout, State) ->

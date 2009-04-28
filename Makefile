@@ -20,8 +20,6 @@ MODS = src/yggdrasil \
 	   src/yggdrasil_router \
 	   src/yggdrasil_utils \
 	   src/yggresource_world \
-	   src/yggresource_guest_sup \
-	   src/yggresource_guest \
 	   src/yggresource_actor_sup \
 	   src/yggresource_actor \
 	   src/mochijson2
