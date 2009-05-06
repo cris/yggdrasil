@@ -1,4 +1,4 @@
--module(yggdrasil_receiver).
+-module(yggresource_space).
 -author('cris.kiev@gmail.com').
 
 -include("yggdrasil.hrl").
@@ -11,31 +11,27 @@
         terminate/3,
         code_change/4]).
 
-%% API
--export([
-        start_link/0,
-        set_socket/2
-    ]).
-
 %% FSM states
 -export([
-        'WAIT_FOR_SOCKET'/2,
-        'WAIT_FOR_DATA'/2
+        'WAIT'/2,
+        'WAIT'/3
 ]).
 
+%% API
+-export([
+        start_link/1
+    ]).
 
 -record(state, {
-        socket,  %% Client socket
-        actor    %% Actor pid
+        actors = [],
+        master
     }).
-
--define(TIMEOUT, 120000).
 
 %%%------------------------------------------------------------------------
 %%% API
 %%%------------------------------------------------------------------------
 %%-------------------------------------------------------------------------
-%% @spec () -> {ok,Pid} | ignore | {error,Error}
+%% @spec (MasterPid) -> {ok,Pid} | ignore | {error,Error}
 %% @doc To be called by the supervisor in order to start the server.
 %%      If init/1 fails with Reason, the function returns {error,Reason}.
 %%      If init/1 returns {stop,Reason} or ignore, the process is
@@ -43,11 +39,8 @@
 %%      respectively.
 %% @end
 %%-------------------------------------------------------------------------
-start_link() ->
-    gen_fsm:start_link(?MODULE, [], []).
-
-set_socket(Pid, Socket) when is_pid(Pid), is_port(Socket) ->
-    gen_fsm:send_event(Pid, {socket_ready, Socket}).
+start_link(MasterPid) ->
+    gen_fsm:start_link(?MODULE, MasterPid, []).
 
 %%%----------------------------------------------------------------------
 %%% Callbacks for gen_fsm
@@ -60,50 +53,8 @@ set_socket(Pid, Socket) when is_pid(Pid), is_port(Socket) ->
 %%          {stop, StopReason}
 %% @private
 %%-------------------------------------------------------------------------
-init([]) ->
-    process_flag(trap_exit, true),
-    {ok, 'WAIT_FOR_SOCKET', #state{}}.
-
-%%-------------------------------------------------------------------------
-%% Func: StateName/2 (Request, State)
-%% Returns: {next_state, NextStateName, NextStateData}          |
-%%          {next_state, NextStateName, NextStateData, Timeout} |
-%%          {stop, Reason, NewStateData}
-%% @private
-%%-------------------------------------------------------------------------
-'WAIT_FOR_SOCKET'({socket_ready, Socket}, State) when is_port(Socket) ->
-    % Now we own the socket
-    %{ok, ActorPid} = yggdrasil_actor:new(Data),
-    inet:setopts(Socket, [{active, once}, {packet, 4}, binary]),
-    %{ok, {IP, _Port}} = inet:peername(Socket),
-    {ok, GuestActor} = supervisor:start_child(yggresource_actor_sup, [Socket]),
-    {next_state, 'WAIT_FOR_DATA', State#state{socket=Socket, actor=GuestActor}, ?TIMEOUT};
-
-'WAIT_FOR_SOCKET'(Other, State) ->
-    error_logger:error_msg("State: 'WAIT_FOR_SOCKET'. Unexpected message: ~p\n", [Other]),
-    %% Allow to receive async messages
-    {next_state, 'WAIT_FOR_SOCKET', State}.
-
-
-'WAIT_FOR_DATA'({data, Data}, #state{socket=Socket, actor=Actor} = State) ->
-    {ok, Request} = yggdrasil_json_protocol:decode(Data),
-    case gen_fsm:sync_send_event(Actor, {request, Request}) of
-        next -> 
-            {next_state, 'WAIT_FOR_DATA', State};
-        {actor, ActorPid} ->
-            {next_state, 'WAIT_FOR_DATA', State#state{actor=ActorPid}};
-        quit ->
-            {stop, should_quit, State}
-    end;
-
-'WAIT_FOR_DATA'(timeout, State) ->
-    error_logger:error_msg("~p Client connection timeout - closing.\n", [self()]),
-    {stop, normal, State};
-
-'WAIT_FOR_DATA'(Data, State) ->
-    io:format("~p Ignoring data: ~p\n", [self(), Data]),
-    {next_state, 'WAIT_FOR_DATA', State, ?TIMEOUT}.
-
+init(MasterPid) ->
+    {ok, 'WAIT', #state{actors=[MasterPid], master=MasterPid}}.
 
 %%-------------------------------------------------------------------------
 %% Func: handle_event/3 (Event, StateName, StateData)
@@ -135,17 +86,6 @@ handle_sync_event(Event, _From, StateName, StateData) ->
 %%          {stop, Reason, NewStateData}
 %% @private
 %%-------------------------------------------------------------------------
-handle_info({tcp, Socket, Bin}, StateName, #state{socket=Socket} = StateData) ->
-    % Flow control: enable forwarding of next TCP message
-    inet:setopts(Socket, [{active, once}]),
-    ?MODULE:StateName({data, Bin}, StateData);
-
-handle_info({tcp_closed, Socket}, _StateName,
-            #state{socket=Socket} = StateData) ->
-    {ok, {IP, _Port}} = inet:peername(Socket),
-    error_logger:info_msg("~p Client ~p disconnected.\n", [self(), IP]),
-    {stop, normal, StateData};
-
 handle_info(_Info, StateName, StateData) ->
     {noreply, StateName, StateData}.
 
@@ -155,8 +95,7 @@ handle_info(_Info, StateName, StateData) ->
 %% Returns: any
 %% @private
 %%-------------------------------------------------------------------------
-terminate(_Reason, _StateName, #state{socket=Socket}) ->
-    (catch gen_tcp:close(Socket)),
+terminate(_Reason, _StateName, _State) ->
     ok.
 
 %%-------------------------------------------------------------------------
@@ -167,3 +106,37 @@ terminate(_Reason, _StateName, #state{socket=Socket}) ->
 %%-------------------------------------------------------------------------
 code_change(_OldVsn, StateName, StateData, _Extra) ->
     {ok, StateName, StateData}.
+
+%%-------------------------------------------------------------------------
+%% FSM states
+%%-------------------------------------------------------------------------
+%%-------------------------------------------------------------------------
+%% Func: StateName/2 (Request, State)
+%% Returns: {next_state, NextStateName, NextStateData}          |
+%%          {next_state, NextStateName, NextStateData, Timeout} |
+%%          {stop, Reason, NewStateData}
+%% @private
+%%-------------------------------------------------------------------------
+'WAIT'(_Request, State) -> 
+    error_logger:info_msg("Area(2) is active.~p\n", [State]),
+    {next_state, 'WAIT', State}.
+
+%%-------------------------------------------------------------------------
+%% Func: StateName/3 (Request, From, State)
+%% Returns: {reply, Reply, NextStateName, NewStateData} |
+%%          {reply, Reply, NextStateName, NewStateData, Timeout} |
+%%          {reply, Reply,  NextStateName,  NewStateData,  hibernate} |
+%%          {next_state, NextStateName, NewStateData} |
+%%          {next_state, NextStateName, NewStateData, Timeout} |
+%%          {next_state, NextStateName, NewStateData, hibernate} |
+%%          {stop, Reason, Reply, NewStateData} |
+%%          {stop, Reason, NewStateData}
+%% @private
+%%-------------------------------------------------------------------------
+'WAIT'({request, Request}, _From, State) -> 
+    error_logger:info_msg("Actor in game.~p\n", [State, Request]),
+    {reply, ok, 'WAIT', State}.
+
+%%%------------------------------------------------------------------------
+%%% private API
+%%%------------------------------------------------------------------------

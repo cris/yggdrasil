@@ -29,6 +29,14 @@ init([]) ->
         worker,
         [yggresource_world]
     },
+    SpaceSup = 
+    {yggresource_space_sup,
+        {yggresource_space_sup, start_link, []},
+        permanent,
+        infinity,
+        supervisor,
+        [yggresource_space_sup]
+    },
     ActorSup = 
     {yggresource_actor_sup,
         {yggresource_actor_sup, start_link, []},
@@ -54,4 +62,4 @@ init([]) ->
         [yggdrasil_listener]
     },
     {ok, {{one_for_one, 10, 10},
-            [WorldResource, ActorSup, ReceiverSup, Listener]}}.
+            [WorldResource, SpaceSup, ActorSup, ReceiverSup, Listener]}}.

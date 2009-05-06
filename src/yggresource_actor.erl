@@ -26,6 +26,8 @@
 -record(state, {
         receiver,
         socket,
+        spaces = [],
+        my_spaces = [],
         login
     }).
 
@@ -166,6 +168,7 @@ code_change(_OldVsn, StateName, StateData, _Extra) ->
 %%%------------------------------------------------------------------------
 guest_action('PUT', [world, actors], #request{params=Params}) ->
     Login_Password = yggdrasil_utils:get([login, password], Params),
+    yggresource_world:actor_call
     case gen_server:call(yggresource_world, {'PUT', actors, Login_Password}) of
         ok                       -> {'ACTOR', <<"ok">>};
         {change_actor, ActorPid} -> {{'QUIT', ActorPid}, <<"ok">>};
@@ -176,10 +179,23 @@ guest_action(_Verb, _Route, Request) ->
     error_logger:error_msg("Incorrect guest request.~p\n", [Request]),
     {'GUEST', '404'}.
 
-actor_action('GET', ['self'], Request) ->
+actor_action('GET', [self], Request) ->
     error_logger:info_msg("Actor: GET /self.~p\n", [Request]),
     {'ACTOR', <<"you are actor">>};
+
+actor_action('PUT', [world, spaces], Request) ->
+    error_logger:info_msg("Actor: PUT /world/spaces.~p\n", [Request]),
+    case yggresource_world:actor_call('PUT', spaces) of
+        {ok, AreaPid} ->
+            {'ACTOR', <<"You create an space">>,
+                [{add_spaces, AreaPid}, {add_my_spaces, AreaPid}]};
+        _ -> 
+            {'ACTOR', <<"You failed to create space">>}
+    end,
+    {'ACTOR', };
 
 actor_action(_Verb, _Route, Request) ->
     error_logger:error_msg("Incorrect actor request.~p\n", [Request]),
     {'ACTOR', '404'}.
+
+update_state()

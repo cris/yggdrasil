@@ -5,20 +5,34 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--export([start_link/0]).
+-export([
+        start_link/0,
+        actor_call/2,
+        actor_call/3
+    ]).
 
 -record(state, {
         guests = [],
         actors = [],
-        areas  = []
+        spaces = []
     }).
 
-
+%% General API
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
+actor_call(Verb, Resource) -> 
+    actor_call(Verb, Resource, {}).
+
+actor_call(Verb, Resource, Params) -> 
+    gen_server:call(yggresource_world, {actor, Verb, Resource, Params}).
+
+
+%%
+
+
 init(_Opts) ->
-    {ok, #state{areas = [], guests = [], actors = []}}.
+    {ok, #state{spaces = [], guests = [], actors = []}}.
 
 handle_call({'PUT', actors, {Login, Password}}, ActorPid, State) ->
     case Reply = check_actor(Login, Password) of
@@ -30,6 +44,12 @@ handle_call({'PUT', actors, {Login, Password}}, ActorPid, State) ->
             NewState = State
     end,
     error_logger:info_msg("World: 'PUT' actors: ~p~n", [Reply]),
+    {reply, Reply, NewState};
+
+handle_call({actor, Verb, Resource, Params}, ActorPid, State) ->
+    {Reply, StateUpdates} = actor_action(Verb, Resource, Params, ActorPid),
+    NewState = update_state(StateUpdates),
+    error_logger:info_msg("World: ~p ~p: ~p~n", [Verb, Resource, Reply]),
     {reply, Reply, NewState};
 
 handle_call(_Request, _From, State) ->
@@ -60,6 +80,18 @@ check_actor(Login, Password) ->
             {error, incorrect_credentials}
     end.
 
+% stub
+check_permission(add_space, _ActorPid) ->
+    ok.
+%%% All actions
+actor_action(Verb, Resource, Params, ActorPid) ->
+    case Reply = check_permission(add_space, ActorPid) of
+        ok ->
+            {ok, NewArea} = supervisor:start_child(yggresource_actor_sup, [ActorPid]),
+            NewState = update_state(add_space, ActorPid, State);
+        _ ->
+            NewState = State
+    end.
 
 %%%------------------------------------------------------------------------
 %%% private API
