@@ -3,6 +3,10 @@
 
 -export([
         get/2,
+        reply_ok/0,
+        reply_ok/1,
+        reply_error/0,
+        reply_error/1,
         binary_to_atom/1,
         bin_to_atom/1,
         bin_to_integer/1,
@@ -30,6 +34,24 @@ get(Keys, PropList) when is_list(Keys) ->
     RList = [proplists:get_value(atom_to_binary(K), PropList) || K <- Keys],
     list_to_tuple(RList).
 
+reply_ok() ->
+    reply_ok([]).
+
+reply_ok(Params) when is_list(Params) ->
+    reply(200, Params).
+
+reply_error() ->
+    reply(400, []).
+
+reply_error(Params) when is_list(Params) ->
+    reply(400, Params).
+
+reply(Code, Params) when is_integer(Code), is_list(Params) ->
+    mochijson2:encode({struct, [
+                {type, reply},
+                {code, Code},
+                {params, {struct, Params}}
+            ]}).
 
 atom_to_binary(Atom) when is_atom(Atom) ->
     <<_:4/binary, Bin/binary>> = term_to_binary(Atom),

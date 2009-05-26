@@ -85,7 +85,7 @@ init([]) ->
     {next_state, 'WAIT_FOR_SOCKET', State}.
 
 
-'WAIT_FOR_DATA'({data, Data}, #state{socket=Socket, actor=Actor} = State) ->
+'WAIT_FOR_DATA'({data, Data}, #state{actor=Actor} = State) ->
     {ok, Request} = yggdrasil_json_protocol:decode(Data),
     case gen_fsm:sync_send_event(Actor, {request, Request}) of
         next -> 

@@ -168,10 +168,11 @@ code_change(_OldVsn, StateName, StateData, _Extra) ->
 %%%------------------------------------------------------------------------
 guest_action('PUT', [world, actors], #request{params=Params}) ->
     Login_Password = yggdrasil_utils:get([login, password], Params),
-    yggresource_world:actor_call
+    yggresource_world:actor_call('PUT', actors, Login_Password),
+    
     case gen_server:call(yggresource_world, {'PUT', actors, Login_Password}) of
-        ok                       -> {'ACTOR', <<"ok">>};
-        {change_actor, ActorPid} -> {{'QUIT', ActorPid}, <<"ok">>};
+        ok                       -> {'ACTOR', yggdrasil_utils:reply_ok()};
+        {change_actor, ActorPid} -> {{'QUIT', ActorPid}, yggdrasil_utils:reply_ok()};
         _                        -> {'GUEST', <<"bad">>}
     end;
 
@@ -191,11 +192,9 @@ actor_action('PUT', [world, spaces], Request) ->
                 [{add_spaces, AreaPid}, {add_my_spaces, AreaPid}]};
         _ -> 
             {'ACTOR', <<"You failed to create space">>}
-    end,
-    {'ACTOR', };
+    end;
 
 actor_action(_Verb, _Route, Request) ->
     error_logger:error_msg("Incorrect actor request.~p\n", [Request]),
     {'ACTOR', '404'}.
 
-update_state()
